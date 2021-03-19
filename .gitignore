@@ -1,0 +1,18 @@
+# pythonの不要部分
+__pycache__/
+*.py[cod]
+
+# jupyterの不要部分
+.ipynb_checkpoints/
+Untitled[1-9].ipynb
+Untitled.ipynb
+
+# その他
+command.txt
+.vscode/
+*.db
+*.tmp
+backup/
+*.zip
+db/
+*.bat
