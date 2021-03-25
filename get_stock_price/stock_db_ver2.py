@@ -1158,7 +1158,7 @@ class StockDatabase():
     
     def _df_tolist_numpy(self, df):
         """
-        DataFrameをリストに変えるメソッド．こちらの方が高速
+        DataFrameをndarrayに変えるメソッド．こちらの方が高速
         """
         #columns_name = list(set(df.columns))
         # indexをndarrayとして取得
@@ -1167,9 +1167,9 @@ class StockDatabase():
         
         df_values = df.values
         df_array = np.concatenate([index_array[:,None], df_values], axis=1)
-        df_list = df_array.tolist()
-        
-        return df_list
+        #df_list = df_array.tolist()
+        #return df_list
+        return df_array
 
     def db_len(self, freq_str="T"):
         """
