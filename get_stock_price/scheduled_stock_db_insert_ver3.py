@@ -84,9 +84,9 @@ class CsvKobetsuInsert():
                 self.stock_loader.set_stock_names(stock_name)
                 try:
                     df = stock_loader.load()
-                except Exception as e:
-                    print("cannot load {}".format(stock_code))
-                    raise e  # ここでレイズする
+                except Exception:
+                    #ここでエラーは気にしない
+                    df = None
 
                 if df is not None:
                     self.stock_db.upsert(df, item_replace_type="replace_null")
