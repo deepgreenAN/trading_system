@@ -319,7 +319,7 @@ def get_workdays_jp(start_date, end_date, return_as="date", end_include=False):
     
     # 期間中のholidayを取得
     holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<end_timestamp)  # DatetimeIndexを使うことに注意
-    holidays_in_span_array = option.holidays_date_array[holidays_in_span_index]  # ndarrayを使う
+    holidays_in_span_datetimeindex = option.holidays_datetimeindex[holidays_in_span_index]  # ndarrayを使う
 
     # 期間中のdatetimeのarrayを取得
     if end_include:
@@ -329,8 +329,10 @@ def get_workdays_jp(start_date, end_date, return_as="date", end_include=False):
     
     
     # 休日に含まれないもの，さらに土日に含まれないもののboolインデックスを取得
-    holiday_bool_array = np.in1d(days_datetimeindex.date, holidays_in_span_array)  # 休日であるかのブール(pd.DatetimeIndex.isin)でもいい
-    holiday_weekday_each_bool_arrays = [days_datetimeindex.weekday==weekday for weekday in option.holiday_weekdays]  # inを使うのを回避
+    holiday_bool_array = days_datetimeindex.isin(holidays_in_span_datetimeindex)  # 休日であるかのブール
+    
+    days_weekday_array = days_datetimeindex.weekday.values
+    holiday_weekday_each_bool_arrays = [days_weekday_array==weekday for weekday in option.holiday_weekdays]  # inを使うのを回避
     holiday_weekday_bool_array = np.logical_or.reduce(holiday_weekday_each_bool_arrays)  # 休日曜日
     
     workdays_bool_array = (~holiday_bool_array)&(~holiday_weekday_bool_array)  # 休日でなく休日曜日でない
@@ -369,7 +371,7 @@ def get_not_workdays_jp(start_date, end_date, return_as="date", end_include=Fals
     
     # 期間中のholidayを取得
     holidays_in_span_index = (start_timestamp<=option.holidays_datetimeindex)&(option.holidays_datetimeindex<end_timestamp)  # DatetimeIndexを使うことに注意
-    holidays_in_span_array = option.holidays_date_array[holidays_in_span_index]  # ndarrayを使う
+    holidays_in_span_datetimeindex = option.holidays_datetimeindex[holidays_in_span_index]  # pd.DatetimeIndexを使う
 
     # 期間中のdatetimeのarrayを取得
     if end_include:
@@ -378,8 +380,10 @@ def get_not_workdays_jp(start_date, end_date, return_as="date", end_include=Fals
         days_datetimeindex = pd.date_range(start=start_date, end=end_date-datetime.timedelta(days=1), freq="D")  # 最終日は含めない
     
     # 休日に含まれないもの，さらに休日曜日に含まれないもののboolインデックスを取得
-    holiday_bool_array = np.in1d(days_datetimeindex.date, holidays_in_span_array)  # 休日であるかのブール(pd.DatetimeIndex.isin)でもいい
-    holiday_weekday_each_bool_arrays = [days_datetimeindex.weekday==weekday for weekday in option.holiday_weekdays]  # inを使うのを回避
+    holiday_bool_array = days_datetimeindex.isin(holidays_in_span_datetimeindex)  # 休日であるかのブール
+    
+    days_weekday_array = days_datetimeindex.weekday.values
+    holiday_weekday_each_bool_arrays = [days_weekday_array==weekday for weekday in option.holiday_weekdays]  # inを使うのを回避
     holiday_weekday_bool_array = np.logical_or.reduce(holiday_weekday_each_bool_arrays)  # 休日曜日
     
     not_workdays_bool_array = holiday_bool_array | holiday_weekday_bool_array  # 休日あるいは休日曜日
@@ -398,29 +402,28 @@ def check_workday_jp(select_date):
         入力するdate
     """
     assert isinstance(select_date, datetime.date)
-    select_date_array = np.array([select_date])  # データ数が一つのndarray
     # 休日であるかどうか
-    is_holiday = np.in1d(select_date_array, option.holidays_date_array).item()  # データ数が一つのため，item
+    is_holiday = (option.holidays_date_array==select_date).sum() > 0
     
     # 休日曜日であるかどうか
-    is_holiday_weekday = select_date.weekday() in option.holiday_weekdays
+    is_holiday_weekday = select_date.weekday() in set(option.holiday_weekdays)
     
     is_workday = not any([is_holiday, is_holiday_weekday])
     
     return is_workday
 
 
-def get_next_workday_jp(select_date, return_as="date", days=1):
+def get_next_workday_jp(select_date, days=1, select_include=False, return_as="date"):
     """
-    次の営業日を取得
+    指定した日数後の営業日を取得
     select_date: datetime.date
         指定する日時
+    days: int
+        日数
     return_as: str, defalt: 'dt'
         返り値の形式
         - 'dt':pd.Timstamp
         - 'datetime': datetime.datetime array
-    days: int
-        経過日数
     """
     assert isinstance(select_date, datetime.date)
     # 返り値の形式の指定
@@ -428,22 +431,58 @@ def get_next_workday_jp(select_date, return_as="date", days=1):
     if not return_as in return_as_set:
         raise Exception("return_as must be any in {}".format(return_as_set))
         
-    def get_next_workday_jp_gen(select_date):
-        add_days=1
+    day_counter = 0
+    holiday_weekdays_set = set(option.holiday_weekdays)  #setにした方が高速？
+
+    holiday_bigger_select_index = (option.holidays_date_array<=select_date).sum()
+    # 祝日イテレータ
+    holiday_iter = iter(option.holidays_date_array[holiday_bigger_select_index:])
+    def days_gen(select_date):
+        add_days = 1  # select_dateを含まない
         while True:
-            next_day = select_date + datetime.timedelta(days=add_days)
-            if check_workday_jp(next_day):
-                yield next_day
+            yield select_date + datetime.timedelta(days=add_days)
             add_days += 1
-    
-    next_workday_gen = get_next_workday_jp_gen(select_date)
-    for i in range(days):
-        next_day = next(next_workday_gen)
-    
+    # 日にちイテレータ
+    days_iter = days_gen(select_date)
+
+    # 以下二つのイテレーターを比較し，one_dayが休日に含まれる場合，カウントしカウントが指定に達した場合終了する
+    one_day = next(days_iter)
+
+    one_holiday = next(holiday_iter)
+
+    while True:
+        if one_day==one_holiday:  #その日が祝日である
+            one_holiday = next(holiday_iter)
+        else:
+            if not one_day.weekday() in holiday_weekdays_set:  #その日が休日曜日である
+                #print(one_day)
+                day_counter += 1  # カウンターをインクリメント
+
+        if day_counter >= days:
+            break
+
+        one_day = next(days_iter)
+        
     if return_as=="date":
-        return next_day
+        return one_day
     elif return_as=="dt":
-        return pd.Timestamp(next_day)
+        return pd.Timestamp(one_day)
+
+
+def get_workdays_number_jp(start_date, days, return_as="date"):
+    """
+    指定した日数分の営業日を取得
+    start_date: datetime.date
+        開始日時
+    days: int
+        日数
+    return_as: str, defalt: 'dt'
+        返り値の形式
+        - 'dt':pd.Timstamp
+        - 'datetime': datetime.datetime array
+    """
+    end_date = get_next_workday_jp(start_date, days=days, return_as="date")
+    return get_workdays_jp(start_date, end_date, end_include=True, return_as=return_as)
         
 
 def extract_workdays_jp_index(dt_index, return_as="index"):
@@ -470,11 +509,13 @@ def extract_workdays_jp_index(dt_index, return_as="index"):
     # 期間内のholidayを取得
     holidays_in_span_index = ((start_datetime-datetime.timedelta(days=1))<option.holidays_datetimeindex)&\
     (option.holidays_datetimeindex<=end_datetime)  # DatetimeIndexを使うことに注意, 当日を含めるため，startから1を引いている．
-    holidays_in_span_array = option.holidays_date_array[holidays_in_span_index]  # ndarrayを使う
+    holidays_in_span_datetimeindex = option.holidays_datetimeindex[holidays_in_span_index]  # pd.DatetimeIndexを使う
     
     # 休日に含まれないもの，さらに土日に含まれないもののboolインデックスを取得    
-    holiday_bool_array = np.in1d(dt_index.date, holidays_in_span_array)  # 休日
-    holiday_weekday_each_bool_arrays = [dt_index.weekday==weekday for weekday in option.holiday_weekdays]  # inを使うのを回避
+    holiday_bool_array = dt_index.tz_localize(None).floor("D").isin(holidays_in_span_datetimeindex)  # 休日
+    
+    dt_index_weekday = dt_index.weekday
+    holiday_weekday_each_bool_arrays = [dt_index_weekday==weekday for weekday in option.holiday_weekdays]  # inを使うのを回避
     holiday_weekday_bool_array = np.logical_or.reduce(holiday_weekday_each_bool_arrays)  # 休日曜日
     
     workdays_bool_array = (~holiday_bool_array)&(~holiday_weekday_bool_array)  # 休日でなく休日曜日でない
