@@ -5,7 +5,7 @@ import datetime
 import numpy as np
 import pandas as pd
 from pathlib import Path
-
+from utils.py_workdays.py_strict_list import StructureStrictList
 
 def check_jst_datetimes_to_naive(*arg_datetimes):
     """
@@ -57,9 +57,6 @@ class JPHolidayGetter:
 
 
 class CSVHolidayGetter:
-    """
-    CSVのソースファイルを利用したHolidayGetter
-    """
     def __init__(self, csv_paths):
         if not isinstance(csv_paths, list):  # リストでないなら，リストにしておく
             csv_paths = [csv_paths]
@@ -96,7 +93,8 @@ class CSVHolidayGetter:
                 left_df = holiday_df
             else:
                 append_bool = ~holiday_df.index.isin(left_df.index)  # 左Dataframeに存在しない部分を追加
-                left_df = left_df.append(holiday_df.loc[append_bool], sort=True)
+                left_df = left_df.append(holiday_df.loc[append_bool])
+                left_df.sort_index(inplace=True)
 
         
         # 指定範囲内の祝日を取得
@@ -143,9 +141,9 @@ class Option():
         self.make_holiday_getter()  # HolidayGetterを作成
         self.make_holidays()  # アトリビュートに追加
         
-        self._holiday_weekdays = [5,6]  # 土曜日・日曜日
-        self._intraday_borders = [[datetime.time(9,0), datetime.time(11,30)],
-                                  [datetime.time(12,30), datetime.time(15,0)]]
+        self._holiday_weekdays = StructureStrictList(5,6)  # 土曜日・日曜日
+        self._intraday_borders = StructureStrictList([datetime.time(9,0), datetime.time(11,30)],
+                                                     [datetime.time(12,30), datetime.time(15,0)])
         
     
     def make_holiday_getter(self):
@@ -221,31 +219,22 @@ class Option():
     @property
     def holiday_weekdays(self):
         # 中身の確認
-        for weekday in self._holiday_weekdays:
-            if not isinstance(weekday, int):
-                raise Exception("holiday_weekdays must be list of integer(0<=x<=6)")
-                
         return self._holiday_weekdays
     
     @holiday_weekdays.setter
     def holiday_weekdays(self, weekdays_list):
+        if not self._holiday_weekdays.check_same_structure_with(weekdays_list, include_outer_length=False):
+            raise Exception("This list is invalid for holida_weekdays")
         self._holiday_weekdays = weekdays_list
     
     @property
     def intraday_borders(self):
-        # 中身の確認
-        for border in self._intraday_borders:
-            if not isinstance(border, list) or len(border) != 2:
-                raise Exception("intraday_borders must be list of list whitch has 2 datetime.time")
-                
-            for border_time in border:
-                if not isinstance(border_time, datetime.time):
-                    raise Exception("intraday_borders must be list of list whitch has 2 datetime.time")
-             
         return self._intraday_borders
     
     @intraday_borders.setter
     def intraday_borders(self, borders_list):
+        if not self._intraday_borders.check_same_structure_with(borders_list, include_outer_length=False):
+            raise Exception("This list is invalid for intraday?borders")
         self._intraday_borders = borders_list
 
 

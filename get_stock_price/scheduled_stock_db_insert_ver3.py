@@ -98,7 +98,7 @@ class CsvKobetsuInsert():
 
 class FunctionComposer():
     """
-    callableなオブジェクトをまとめてcallする．closeメソッドも考慮できる．
+    callableなオブジェクトをまとめてcallする．
     """
     def __init__(self, function_list):
         """
