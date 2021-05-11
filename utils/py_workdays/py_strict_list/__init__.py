@@ -1,1 +1,0 @@
-from .py_strict_list_ver1 import *

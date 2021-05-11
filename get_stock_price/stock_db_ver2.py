@@ -13,7 +13,7 @@ import warnings
 from functools import lru_cache
 
 from utils import ConvertFreqOHLCV, get_sec_from_freq, middle_sample_type_with_check, get_next_datetime, get_previous_datetime
-from utils import get_df_freq, get_utc_naive_datetime_from_datetime, add_datetime, get_timezone_datetime_like
+from utils import get_df_freq, get_utc_naive_datetime_from_datetime, get_timezone_datetime_like
 
 stock_str_list = ['Open', 'High', 'Low', 'Close', 'Volume']
 
@@ -841,7 +841,7 @@ class StockDatabase():
         transform_dict = {"freq_str":freq_str, "to_tokyo":to_tokyo}  # transformに渡す辞書
 
         # 一応get_nextdatetimeで比較する
-        next_datetime = get_next_datetime(start_datetime, freq_str, has_mod=True)
+        next_datetime = get_next_datetime(start_datetime, freq_str, clear_mod=True)
         if next_datetime > end_datetime:  # サンプリング周期一つ分のスパンにも満たない場合
             warnings.warn("this span less than one frequency")
 
@@ -855,7 +855,7 @@ class StockDatabase():
         if end_datetime is not None:
             if is_end_include:  # 最後のサンプリング周期分も含む場合
                 # end_datetimeのサンプル分も含める
-                next_end_datetime = get_next_datetime(end_datetime, freq_str, has_mod=True)
+                next_end_datetime = get_next_datetime(end_datetime, freq_str, clear_mod=True)
                 utc_naive_end_datetime = get_utc_naive_datetime_from_datetime(next_end_datetime)  # utcのnaiveなdatetimeに変更
             else:
                 # 普通に，end_datetimeは含めないようにする
@@ -900,7 +900,7 @@ class StockDatabase():
         transform_dict = {"freq_str":freq_str, "to_tokyo":to_tokyo}  # transformに渡す辞書
                     
         # 探索範囲の時刻の取得
-        next_datetime = get_next_datetime(select_datetime, freq_str, has_mod=True)  # aware or local naive
+        next_datetime = get_next_datetime(select_datetime, freq_str, clear_mod=True)  # aware or local naive
 
         # utcのnaiveなdatetimeに変更
         utc_naive_select_datetime = get_utc_naive_datetime_from_datetime(select_datetime)  # utcのnaiveなdatetimeに変更
@@ -946,7 +946,7 @@ class StockDatabase():
 
         while True:
             # freqを考慮した次の時間の計算
-            temp_next_datetime = get_next_datetime(temp_from_datetime, freq_str, has_mod=True)
+            temp_next_datetime = get_next_datetime(temp_from_datetime, freq_str, clear_mod=True)
 
             # utcのnaiveなdatetimeに変更
             utc_naive_from_datetime = get_utc_naive_datetime_from_datetime(temp_from_datetime)  # utcのnaiveなdatetimeに変更
@@ -1047,10 +1047,10 @@ class StockDatabase():
                 IsEndAll = True
 
             while True:
-                added_datetime = add_datetime(temp_start_datetime, 
-                                              freq_str=self.database_frequency,
-                                              add_number=row_max
-                                              )
+                added_datetime = get_next_datetime(temp_start_datetime, 
+                                                   freq_str=self.database_frequency,
+                                                   number=row_max
+                                                   )
                 if added_datetime > end_datetime:  # 範囲を上回ったとき
                     temp_end_datetime = end_datetime
                     IsEndThisColumns = True  # 終了フラッグ
