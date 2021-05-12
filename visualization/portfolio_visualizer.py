@@ -134,7 +134,8 @@ def visualize_portfolio_transform_bokeh(portfolio_state_list, save_path=None, is
 
     p2.xaxis.major_label_overrides = {str(one_x) : str(all_datetime_array[i]) for i, one_x in enumerate(x)}
 
-    created_figure = bokeh.layouts.column(p1_text, p1, p2_text, p2)
+    layout_list = [p1_text, p1, p2_text, p2]
+    created_figure = bokeh.layouts.column(*layout_list)
 
     if is_save:
             if save_path.suffix == ".png":
@@ -144,6 +145,8 @@ def visualize_portfolio_transform_bokeh(portfolio_state_list, save_path=None, is
                 bokeh.io.save(created_figure, filename=save_path, title="trading process")    
             else:
                 raise Exception("The suffix of save_path is must be '.png' or '.html'.")
+            
+            return None
     if is_show:
         try:
             reset_output()
@@ -154,10 +157,54 @@ def visualize_portfolio_transform_bokeh(portfolio_state_list, save_path=None, is
             if is_jupyter:
                 output_notebook()
             show(created_figure)
+            
+        return None
         
     if not is_save and not is_show:
-        raise Exception("is_save and is_show is False. This function do nothing")
+        return layout_list
 
+
+def visualize_portfolio_rl_bokeh(portfolio_state_list, reward_list, save_path=None, is_save=False, is_show=True, is_jupyter=True):
+    all_datetime_array = np.array([get_naive_datetime_from_datetime(one_state.datetime) for one_state in portfolio_state_list])
+    reward_array = np.array(reward_list)
+    x = np.arange(0, len(portfolio_state_list))
+
+    layout_list = visualize_portfolio_transform_bokeh(portfolio_state_list, is_save=False, is_show=False)
+
+    add_p1 = bokeh.plotting.figure(plot_width=1200,plot_height=300,title="報酬")
+    add_p1.line(x, reward_array, legend_label="reward", line_width=2, color="green")
+    add_p1.xaxis.major_label_overrides = {str(one_x) : str(all_datetime_array[i]) for i, one_x in enumerate(x)}
+
+    add_p1.yaxis[0].axis_label = "報酬"
+
+    layout_list.extend([add_p1])
+    created_figure = bokeh.layouts.column(*layout_list)
+
+    if is_save:
+            if save_path.suffix == ".png":
+                bokeh.io.export_png(created_figure, filename=save_path)
+            elif save_path.suffix == ".html":
+                output_file(save_path)
+                bokeh.io.save(created_figure, filename=save_path, title="trading process")    
+            else:
+                raise Exception("The suffix of save_path is must be '.png' or '.html'.")
+            
+            return None
+    if is_show:
+        try:
+            reset_output()
+            if is_jupyter:
+                output_notebook()
+            show(created_figure)
+        except:
+            if is_jupyter:
+                output_notebook()
+            show(created_figure)
+            
+        return None
+        
+    if not is_save and not is_show:
+        return layout_list
 
 if __name__ == "__main__":
     pass

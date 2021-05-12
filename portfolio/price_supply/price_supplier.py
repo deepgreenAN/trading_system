@@ -129,7 +129,7 @@ class StockDBPriceSupplier(PriceSuppliier):
         del self.all_datetime_index
         
         # データの取得
-        self.now_index = np.argwhere(self.window==0).item()
+        self.now_index = abs(min_window)
         now_datetime = self.all_datetime_index_values[self.now_index]
         
         add_window = self.now_index + self.window

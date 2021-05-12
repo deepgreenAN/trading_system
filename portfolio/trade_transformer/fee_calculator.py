@@ -24,6 +24,13 @@ class FeeCalculatorPerNumber(FeeCalculator):
         commition_fee = self.fee_per_number*np.abs((new_portfolio_state.numbers[not_key_currency_indices] - pre_portfolio_state.numbers[not_key_currency_indices])).sum()
         return commition_fee
 
+class FeeCalculatorFree(FeeCalculator):
+    """
+    手数料は存在しない
+    """
+    def calculate(self, pre_portfolio_state, new_portfolio_state):
+        return 0
+
 
 if __name__ == "__main__":
     pass
