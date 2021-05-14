@@ -78,7 +78,9 @@ class PortfolioTransformer:
             
         else:
             assert len(initial_data_unit.names) == len(self.initial_portfolio_vector)
-            assert self.initial_portfolio_vector.sum() == 1.0
+            if abs(self.initial_portfolio_vector.sum() - 1) > 1.e-5: # 大体1ならOK
+                raise Exception("initial portfolio vector sum must be 1. This portfolio vector is {}.\n This sum is {}".format(self.initial_portfolio_vector,
+                                                                                                                               self.initial_portfolio_vector.sum()))
             
         if self.initial_mean_cost_price_array is None:
             self.initial_mean_cost_price_array = now_price_array
