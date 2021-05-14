@@ -5,6 +5,7 @@ from bokeh.models import Range1d, LinearAxis, Div, HoverTool
 from bokeh.io import show
 from bokeh.io import output_notebook, reset_output, output_file
 from bokeh.palettes import d3
+import matplotlib.pyplot as plt
 
 from utils import get_naive_datetime_from_datetime
 
@@ -211,6 +212,171 @@ def visualize_portfolio_rl_bokeh(portfolio_state_list, reward_list, save_path=No
         
     if not is_save and not is_show:
         return layout_list
+
+
+def visualize_portfolio_transform_matplotlib(portfolio_state_list, save_path=None, is_save=False, is_show=True, is_jupyter=True):
+    # テータの取り出し
+    ticker_names = portfolio_state_list[0].names
+    colors = d3["Category20"][len(ticker_names)]
+
+    all_price_array = np.stack([one_state.now_price_array for one_state in portfolio_state_list], axis=1)
+    all_portfolio_vector = np.stack([one_state.portfolio_vector for one_state in portfolio_state_list], axis=1)
+    all_mean_cost_price_array = np.stack([one_state.mean_cost_price_array for one_state in portfolio_state_list], axis=1)
+    all_assets_array = np.array([one_state.all_assets for one_state in portfolio_state_list])
+    all_datetime_array = np.array([get_naive_datetime_from_datetime(one_state.datetime) for one_state in portfolio_state_list])
+    x = np.arange(0, len(portfolio_state_list))
+
+    # sorceの作成
+    portfolio_vector_source = {"x":x, "datetime":all_datetime_array}
+    price_source_x = []
+    price_source_y = []
+
+    mean_cost_price_source_x = []
+    mean_cost_price_source_y = []
+
+    for i, ticker_name in enumerate(ticker_names):
+        portfolio_vector_source[ticker_name] = all_portfolio_vector[i,:]
+
+        price_source_x.append(x)
+        price_source_y.append(all_price_array[i,:]/all_price_array[i,0])
+
+        mean_cost_price_source_x.append(x)
+        mean_cost_price_source_y.append(all_mean_cost_price_array[i,:]/all_mean_cost_price_array[i,0])
+
+    fig = plt.figure(figsize=(20,15))
+    ax1 = fig.add_subplot(311)
+
+    for one_price_x, one_price_y, ticker_name in zip(price_source_x, price_source_y, ticker_names):
+        ax1.plot(one_price_x, one_price_y, label=ticker_name)
+
+    ax1.legend(loc="upper right")
+    ax1.set_title("normalized price")
+
+    ax2 = fig.add_subplot(312)
+
+    for i, ticker_name in enumerate(ticker_names):
+        if i==0:
+            ax2.bar(x, portfolio_vector_source[ticker_name], width=1, label=ticker_name)
+            offset = portfolio_vector_source[ticker_name].copy()
+        else:
+            ax2.bar(x, portfolio_vector_source[ticker_name], width=1, label=ticker_name, bottom=offset)
+            offset += portfolio_vector_source[ticker_name]
+
+    ax2.legend(loc="upper right")
+    ax2.set_title("portfolio vector")
+
+    ax3 = fig.add_subplot(313)
+
+    for one_mean_cost_price_x, one_mean_cost_price_y, ticker_name in zip(mean_cost_price_source_x, mean_cost_price_source_y, ticker_names):
+        ax3.plot(one_mean_cost_price_x, one_mean_cost_price_y, label=ticker_name)
+
+    ax3.legend(loc="upper right")
+    ax3.set_title("mean_cost_price and all assets")
+    y_min, y_max = make_y_limit_multi(mean_cost_price_source_y, lowwer_ratio=0.1, upper_ratio=0.1)
+    ax3.set_ylim(y_min, y_max)
+
+    ax4 = ax3.twinx()
+    ax4.plot(x, all_assets_array, color="red", linewidth=3, label="all assets")
+
+    ax4.legend(loc="upper left")
+    y_min, y_max = make_y_limit(all_assets_array, upper_ratio=0.1, lowwer_ratio=0.1)
+    ax4.set_ylim(y_min, y_max)
+    
+    if is_save:
+            if save_path.suffix == ".png":
+                  fig.savefig(save_path)
+            else:
+                raise Exception("The suffix of save_path is must be '.png' or '.html'.")
+            
+    if is_show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+
+def visualize_portfolio_rl_matplotlib(portfolio_state_list, reward_list, save_path=None, is_save=False, is_show=True, is_jupyter=True):
+    # テータの取り出し
+    ticker_names = portfolio_state_list[0].names
+    colors = d3["Category20"][len(ticker_names)]
+
+    all_price_array = np.stack([one_state.now_price_array for one_state in portfolio_state_list], axis=1)
+    all_portfolio_vector = np.stack([one_state.portfolio_vector for one_state in portfolio_state_list], axis=1)
+    all_mean_cost_price_array = np.stack([one_state.mean_cost_price_array for one_state in portfolio_state_list], axis=1)
+    all_assets_array = np.array([one_state.all_assets for one_state in portfolio_state_list])
+    all_datetime_array = np.array([get_naive_datetime_from_datetime(one_state.datetime) for one_state in portfolio_state_list])
+    reward_array = np.array(reward_list)
+    x = np.arange(0, len(portfolio_state_list))
+
+    # sorceの作成
+    portfolio_vector_source = {"x":x, "datetime":all_datetime_array}
+    price_source_x = []
+    price_source_y = []
+
+    mean_cost_price_source_x = []
+    mean_cost_price_source_y = []
+
+    for i, ticker_name in enumerate(ticker_names):
+        portfolio_vector_source[ticker_name] = all_portfolio_vector[i,:]
+
+        price_source_x.append(x)
+        price_source_y.append(all_price_array[i,:]/all_price_array[i,0])
+
+        mean_cost_price_source_x.append(x)
+        mean_cost_price_source_y.append(all_mean_cost_price_array[i,:]/all_mean_cost_price_array[i,0])
+
+    fig = plt.figure(figsize=(20,15))
+    ax1 = fig.add_subplot(411)
+
+    for one_price_x, one_price_y, ticker_name in zip(price_source_x, price_source_y, ticker_names):
+        ax1.plot(one_price_x, one_price_y, label=ticker_name)
+
+    ax1.legend(loc="upper right")
+    ax1.set_title("normalized price")
+
+    ax2 = fig.add_subplot(412)
+
+    for i, ticker_name in enumerate(ticker_names):
+        if i==0:
+            ax2.bar(x, portfolio_vector_source[ticker_name], width=1, label=ticker_name)
+            offset = portfolio_vector_source[ticker_name].copy()
+        else:
+            ax2.bar(x, portfolio_vector_source[ticker_name], width=1, label=ticker_name, bottom=offset)
+            offset += portfolio_vector_source[ticker_name]
+
+    ax2.legend(loc="upper right")
+    ax2.set_title("portfolio vector")
+
+    ax3 = fig.add_subplot(413)
+
+    for one_mean_cost_price_x, one_mean_cost_price_y, ticker_name in zip(mean_cost_price_source_x, mean_cost_price_source_y, ticker_names):
+        ax3.plot(one_mean_cost_price_x, one_mean_cost_price_y, label=ticker_name)
+
+    ax3.legend(loc="upper right")
+    ax3.set_title("mean_cost_price and all assets")
+    y_min, y_max = make_y_limit_multi(mean_cost_price_source_y, lowwer_ratio=0.1, upper_ratio=0.1)
+    ax3.set_ylim(y_min, y_max)
+
+    ax4 = ax3.twinx()
+    ax4.plot(x, all_assets_array, color="red", linewidth=3, label="all assets")
+
+    ax4.legend(loc="upper left")
+    y_min, y_max = make_y_limit(all_assets_array, upper_ratio=0.1, lowwer_ratio=0.1)
+    ax4.set_ylim(y_min, y_max)
+    
+    ax5 = fig.add_subplot(414)
+    ax5.plot(x, reward_array, color="green")
+    ax5.set_title("reward")
+    
+    if is_save:
+            if save_path.suffix == ".png":
+                  fig.savefig(save_path)
+            else:
+                raise Exception("The suffix of save_path is must be '.png' or '.html'.")
+            
+    if is_show:
+        plt.show()
+    else:
+        plt.close(fig)
 
 if __name__ == "__main__":
     pass
