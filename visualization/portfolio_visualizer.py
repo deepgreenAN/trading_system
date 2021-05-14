@@ -53,6 +53,9 @@ def make_ticker_text(ticker_value_array, ticker_names):
 
 
 def visualize_portfolio_transform_bokeh(portfolio_state_list, save_path=None, is_save=False, is_show=True, is_jupyter=True):
+    """
+    ["now_price_array", "portfoilo_vector", "mean_cost_price_array", "all_assets", "datetime"]
+    """
     # テータの取り出し
     ticker_names = portfolio_state_list[0].names
     colors = d3["Category20"][len(ticker_names)]
@@ -165,6 +168,9 @@ def visualize_portfolio_transform_bokeh(portfolio_state_list, save_path=None, is
 
 
 def visualize_portfolio_rl_bokeh(portfolio_state_list, reward_list, save_path=None, is_save=False, is_show=True, is_jupyter=True):
+    """
+    [datetime]
+    """
     all_datetime_array = np.array([get_naive_datetime_from_datetime(one_state.datetime) for one_state in portfolio_state_list])
     reward_array = np.array(reward_list)
     x = np.arange(0, len(portfolio_state_list))
