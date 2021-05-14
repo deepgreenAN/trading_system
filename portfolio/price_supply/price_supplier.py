@@ -18,6 +18,12 @@ class PriceSuppliier(metaclass=ABCMeta):
         pass
 
 
+class CannotGetAllDataError(Exception):
+    def __init__(self, strings):
+        self.strings = strings
+    def __str__(self):
+        return self.strings
+
 class StockDBPriceSupplier(PriceSuppliier):
     """
     StockDatabaseに対応するPriceSupplier
@@ -107,6 +113,14 @@ class StockDBPriceSupplier(PriceSuppliier):
         # episode_dfの補間
         if self.interpolate:
             add_datetime_bool = ~self.all_datetime_index.isin(self.episode_df.index)
+            
+            # 補間を行う数が20%を越えた場合
+            if (add_datetime_bool.sum()/len(self.all_datetime_index)) > 0.1:
+                err_str = "Interpolate exceeds 10 % about tickers={}, datetimes[{},{}]".format(self.ticker_names,
+                                                                                               episode_start_datetime,
+                                                                                               episode_end_datetime)
+                raise CannotGetAllDataError(err_str)
+            
             add_datetime_index = self.all_datetime_index[add_datetime_bool]
             # Noneのdfを作成
             nan_df = pd.DataFrame(index=add_datetime_index, columns=self.episode_df.columns)
@@ -122,11 +136,22 @@ class StockDBPriceSupplier(PriceSuppliier):
             self.all_datetime_index = self.all_datetime_index[share_index_bool]
         
         # dfをndarrayに変更
-        self.episode_df_values = self.episode_df.values
+        self.episode_df_values = self.episode_df.values.astype(float)
         del self.episode_df
         
         self.all_datetime_index_values = self.all_datetime_index.to_pydatetime()
         del self.all_datetime_index
+        
+        # データが正しく取得できたかどうか
+        if np.isnan(self.episode_df_values).sum() > 0:
+            err_str = "PriceSupplier cannot get {} data  about tickers={}, datetimes[{},{}]".format(
+                np.isnan(self.episode_df_values).sum(),
+                self.ticker_names,
+                episode_start_datetime,
+                episode_end_datetime)
+  
+            raise CannotGetAllDataError(err_str)
+        
         
         # データの取得
         self.now_index = abs(min_window)
@@ -207,7 +232,7 @@ class StockDBPriceSupplier(PriceSuppliier):
                                  )
         done = self.now_index >= self.episode_length
         
-        return out_unit, done
+        return out_unit, done 
 
 if __name__ == "__main__":
     pass

@@ -15,8 +15,9 @@ class PortfolioTransformer:
                  price_supplier, 
                  portfolio_restrictor=PortfolioRestrictorIdentity(), 
                  use_ohlc="Close", 
-                 initial_portfolio_vector=None, 
-                 initial_all_assets=1e6, 
+                 initial_portfolio_vector=None,
+                 initial_mean_cost_price_array=None,
+                 initial_all_assets=None, 
                  fee_calculator=FeeCalculatorPerNumber(fee_per_number=1e-3)):
         """
         price_supplier: PriceSupplier
@@ -33,6 +34,7 @@ class PortfolioTransformer:
         self.price_supplier = price_supplier
         self.portfolio_restrictor = portfolio_restrictor
         self.initial_portfolio_vector = initial_portfolio_vector
+        self.initial_mean_cost_price_array = initial_mean_cost_price_array
         self.initial_all_assets = initial_all_assets
         self.fee_calculator = fee_calculator
     
@@ -67,7 +69,9 @@ class PortfolioTransformer:
         initial_data_unit, done = self.price_supplier.reset(start_datetime, window)
     
         now_price_bool = initial_data_unit.window==0 
+        now_price_array = getattr(initial_data_unit, self.use_ohlc_filed)[:,now_price_bool].squeeze()
     
+        # 初期パラメータ―のデフォルト値
         if self.initial_portfolio_vector is None:
             self.initial_portfolio_vector = np.zeros(len(initial_data_unit.names))
             self.initial_portfolio_vector[initial_data_unit.key_currency_index] = 1.0
@@ -76,9 +80,15 @@ class PortfolioTransformer:
             assert len(initial_data_unit.names) == len(self.initial_portfolio_vector)
             assert self.initial_portfolio_vector.sum() == 1.0
             
+        if self.initial_mean_cost_price_array is None:
+            self.initial_mean_cost_price_array = now_price_array
+        else:
+            assert self.initial_mean_cost_price_array.shape[0] == now_price_array.shape[0]
+            
+        if self.initial_all_assets is None:
+            self.initial_all_assets = 1.e6            
         
-        now_price_array = getattr(initial_data_unit, self.use_ohlc_filed)[:,now_price_bool].squeeze()
-    
+        # PortfoliioStateの作成
         self.portfolio_state = PortfolioState(names=initial_data_unit.names,
                                               key_currency_index=initial_data_unit.key_currency_index,
                                               window=initial_data_unit.window,
@@ -112,8 +122,9 @@ class PortfolioTransformer:
         if not isinstance(action, np.ndarray):
             action = np.array(action)
         assert (action<0).sum() == 0 and (action>1).sum() == 0
-        assert abs(action.sum() - 1.0) < 1.e-5  # 大体1ならOK
-        
+        if abs(action.sum() - 1.0) > 1.e-5:  # 大体1ならOK
+            raise Exception("action sum must be 1. This action is {}.\n This sum is {}".format(action, action.sum()))
+            
         #from IPython.core.debugger import Pdb; Pdb().set_trace()
         
         previous_portfolio_state = self.portfolio_state
@@ -162,6 +173,7 @@ class PortfolioTransformer:
         self.portfolio_state = self.portfolio_state._replace(all_assets=all_assets-all_fee)   
         
         return self.portfolio_state.copy(), done
+        
         
 if __name__ == "__main__":
     pass
