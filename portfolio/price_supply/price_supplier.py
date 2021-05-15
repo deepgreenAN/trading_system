@@ -70,6 +70,12 @@ class StockDBPriceSupplier(PriceSuppliier):
             self.window = np.array(window)
         else:
             self.window = window
+            
+        if isinstance(self.ticker_names, np.ndarray):
+            self.ticker_names = self.ticker_names.tolist()
+        
+        if len(self.ticker_names)!=len(set(self.ticker_names)):
+            raise Exception("Ticker_names is duplicate")
         
         min_window = min(self.window)
         max_window = max(self.window)
@@ -136,7 +142,7 @@ class StockDBPriceSupplier(PriceSuppliier):
             self.all_datetime_index = self.all_datetime_index[share_index_bool]
         
         # dfをndarrayに変更
-        self.episode_df_values = self.episode_df.values.astype(float)
+        self.episode_df_values = self.episode_df.values
         del self.episode_df
         
         self.all_datetime_index_values = self.all_datetime_index.to_pydatetime()
@@ -144,12 +150,9 @@ class StockDBPriceSupplier(PriceSuppliier):
         
         # データが正しく取得できたかどうか
         if np.isnan(self.episode_df_values).sum() > 0:
-            err_str = "PriceSupplier cannot get {} data  about tickers={}, datetimes[{},{}]".format(
-                np.isnan(self.episode_df_values).sum(),
-                self.ticker_names,
-                episode_start_datetime,
-                episode_end_datetime)
-  
+            err_str = "PriceSupplier cannot get data about tickers={}, datetimes[{},{}]".format(self.ticker_names,
+                                                                                           episode_start_datetime,
+                                                                                           episode_end_datetime)
             raise CannotGetAllDataError(err_str)
         
         
