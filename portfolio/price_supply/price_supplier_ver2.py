@@ -3,11 +3,32 @@ import pandas as pd
 from abc import ABCMeta, abstractmethod
 
 from utils import get_previous_workday_intraday_datetime, get_next_workday_intraday_datetime
-from utils import py_workdays
+import py_workdays
 from portfolio.trade_transformer import DataSupplyUnit
+from utils import TradeSystemBaseError
+
+
+class CannotGetAllDataError(TradeSystemBaseError):
+    """
+    PriceSupplierでデータの取得が出来なかった場合の例外
+    """
+    def __init__(self, err_str=None):
+        """
+        err_str:
+            エラーメッセージ
+        """
+        self.err_str = err_str
+    def __str__(self):
+        if self.err_str is None:
+            return "Cannot get all data."
+        else:
+            return self.err_str
 
 
 class PriceSuppliier(metaclass=ABCMeta):
+    """
+    PriceSupplierの基底クラス．このインターフェースを実装していればよい
+    """
     @abstractmethod
     def reset(self, start_datetime, window):
         pass
@@ -16,12 +37,6 @@ class PriceSuppliier(metaclass=ABCMeta):
     def step(self):
         pass
 
-
-class CannotGetAllDataError(Exception):
-    def __init__(self, strings):
-        self.strings = strings
-    def __str__(self):
-        return self.strings
 
 class StockDBPriceSupplier(PriceSuppliier):
     """
@@ -96,6 +111,13 @@ class StockDBPriceSupplier(PriceSuppliier):
                                                is_end_include=True,  # 最後の値も含める
                                                to_tokyo=True,  #必ずTrueに
                                               )
+
+        if episode_df is None:
+            raise CannotGetAllDataError("This ticker names not in stockdb")
+
+        if len(self.ticker_names)*5!=len(episode_df.columns):
+            err_str = "Cannot get dataframe from stockdb."
+            raise CannotGetAllDataError(err_str)
         
         self.episode_df = py_workdays.extract_workdays_intraday_jp(episode_df)
         
@@ -113,6 +135,7 @@ class StockDBPriceSupplier(PriceSuppliier):
                                            freq=self.freq_str,
                                            closed="left"
                                           )
+        
         self.all_datetime_index = py_workdays.extract_workdays_intraday_jp_index(all_datetime_index)
         
         # episode_dfの補間
@@ -141,7 +164,7 @@ class StockDBPriceSupplier(PriceSuppliier):
             self.all_datetime_index = self.all_datetime_index[share_index_bool]
         
         # dfをndarrayに変更
-        self.episode_df_values = self.episode_df.values
+        self.episode_df_values = self.episode_df.values.astype(float)
         del self.episode_df
         
         self.all_datetime_index_values = self.all_datetime_index.to_pydatetime()
@@ -150,8 +173,8 @@ class StockDBPriceSupplier(PriceSuppliier):
         # データが正しく取得できたかどうか
         if np.isnan(self.episode_df_values).sum() > 0:
             err_str = "PriceSupplier cannot get data about tickers={}, datetimes[{},{}]".format(self.ticker_names,
-                                                                                           episode_start_datetime,
-                                                                                           episode_end_datetime)
+                                                                                                episode_start_datetime,
+                                                                                                episode_end_datetime)
             raise CannotGetAllDataError(err_str)
         
         
@@ -235,6 +258,7 @@ class StockDBPriceSupplier(PriceSuppliier):
         done = self.now_index >= self.episode_length
         
         return out_unit, done 
+
 
 if __name__ == "__main__":
     pass
