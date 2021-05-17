@@ -77,8 +77,8 @@ class PriceNormalizeConst:
     @const_array.setter
     def const_array(self, const_array):
         if const_array is not None:
-            if np.isnan(self._const_array).sum() > 0:
-                raise StateTransformInvalidError("PriceNormalizeConst.const_array has nan.")
+            if np.isnan(const_array).sum() > 0:
+                raise StateTransformInvalidError("PriceNormalizeConst.const_array cannot set array include nan.")
         else:
             raise StateTransformInvalidError("PriceNormalizeConst.const_array cannot be sestted None")
         self._const_array = const_array
@@ -92,7 +92,6 @@ class PriceNormalizeConst:
         
         new_price_array = portfolio_state.price_array / self._const_array[:,None]
         return portfolio_state._replace(price_array=new_price_array)
-
 
 class MeanCostPriceNormalizeConst:
     """
@@ -108,8 +107,8 @@ class MeanCostPriceNormalizeConst:
     @const_array.setter
     def const_array(self, const_array):
         if const_array is not None:
-            if np.isnan(self._const_array).sum() > 0:
-                raise StateTransformInvalidError("MeanCostPriceNormalizeConst.const_array has nan.")
+            if np.isnan(const_array).sum() > 0:
+                raise StateTransformInvalidError("MeanCostPriceNormalizeConst.const_array cannot set array include nan.")
         else:
             raise StateTransformInvalidError("MeanCostPriceNormalizeConst.const_array cannot be sestted None")
         self._const_array = const_array
