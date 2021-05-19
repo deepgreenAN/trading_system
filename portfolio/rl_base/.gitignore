@@ -10,6 +10,7 @@ Untitled.ipynb
 # その他
 *.tmp
 temp_agent/
+temp_*/
 agents/
 search_result_figures/
 searched_agents/
