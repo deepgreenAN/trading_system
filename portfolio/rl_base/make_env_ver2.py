@@ -21,7 +21,9 @@ def make_env(db_path,
              end_datetime=jst.localize(datetime.datetime(2020,11,20,0,0,0)),
              episode_length=300,
              window=np.arange(0,50),
-             ticker_number=19):
+             ticker_number=19,
+             fee_const=0.0025,
+             ):
     ticker_codes_df = pd.read_csv(csv_path, header=0)  # 自分で作成
     ticker_codes = ticker_codes_df["code"].values.astype(str).tolist()
     # stock_db
@@ -71,7 +73,7 @@ def make_env(db_path,
     trade_env = TradeEnv(portfolio_transformer,
                         sampler_manager,
                         window=window,
-                        fee_const=0.0025
+                        fee_const=fee_const
                         )
 
     return trade_env
