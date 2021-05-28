@@ -1,7 +1,7 @@
 import re
 import pandas as pd
 
-from .datetime_freq_ver1 import middle_sample_type_with_check, get_df_freq, get_sec_from_freq
+from .datetime_freq_ver2 import middle_sample_type_with_check, get_df_freq, get_sec_from_freq
 
 # 日本株の場合
 #base_ohlc_patterns = {
