@@ -85,7 +85,7 @@ class DatetimeSampler:
                                            closed="left"
                                           )  
         
-        self.all_datetime_value = py_workdays.extract_workdays_intraday_jp_index(all_datetime_index).to_pydatetime()
+        self.all_datetime_value = py_workdays.extract_workdays_intraday_index(all_datetime_index).to_pydatetime()
         
         self.all_datetime_index_range = np.arange(0, len(self.all_datetime_value))
         self.episode_length = episode_length

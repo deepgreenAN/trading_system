@@ -119,7 +119,7 @@ class StockDBPriceSupplier(PriceSuppliier):
             err_str = "Cannot get dataframe from stockdb."
             raise CannotGetAllDataError(err_str)
         
-        self.episode_df = py_workdays.extract_workdays_intraday_jp(episode_df)
+        self.episode_df = py_workdays.extract_workdays_intraday(episode_df)
         
         # 各OHLCVに対応するboolを求めておく
         column_names_array = self.episode_df.columns.values.astype(str)
@@ -136,7 +136,7 @@ class StockDBPriceSupplier(PriceSuppliier):
                                            closed="left"
                                           )
         
-        self.all_datetime_index = py_workdays.extract_workdays_intraday_jp_index(all_datetime_index)
+        self.all_datetime_index = py_workdays.extract_workdays_intraday_index(all_datetime_index)
         
         # episode_dfの補間
         if self.interpolate:
