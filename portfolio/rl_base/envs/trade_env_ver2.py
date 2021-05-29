@@ -48,9 +48,10 @@ class TradeEnv:
         random_portfolio_vector = self.sampler_manager.portfolio_vector_sampler.sample(seed=seed)  # ポートフォリオベクトルのサンプリング
         random_mean_cost_price_array = self.sampler_manager.mean_cost_price_array_sampler.sample(seed=seed)  # 平均取得価格のサンプリング
         
+
         self.portfolio_transformer.price_supplier.ticker_names = list(random_ticker_names)  # 銘柄名の変更
         self.portfolio_transformer.initial_portfolio_vector = random_portfolio_vector  # 初期ポートフォリオを変更(Noneの場合デフォルト)
-        self.portfolio_transformer.initial_mean_cost_price_array = random_mean_cost_price_array  #初期平均取得価格を変更(Noneの場合デフォルト) 
+        self.portfolio_transformer.initial_mean_cost_price_array = random_mean_cost_price_array  #初期平均取得価格を変更(Noneの場合デフォルト)
         
         portfolio_state, done = self.portfolio_transformer.reset(random_datetime, window=self.window)
         

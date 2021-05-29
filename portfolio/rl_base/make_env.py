@@ -8,32 +8,33 @@ from get_stock_price import StockDatabase
 from portfolio.trade_transformer import PortfolioTransformer, PortfolioRestrictorIdentity, FeeCalculatorFree
 from portfolio.price_supply import StockDBPriceSupplier
 
-from portfolio.rl_base.envs import TradeEnv, TickerSampler, DatetimeSampler, SamplerManager, PortfolioVectorSampler, ConstSamper
+from portfolio.rl_base.envs import TradeEnv, TickerSampler, DatetimeSampler, SamplerManager, PortfolioVectorSampler, ConstSamper, MeanCostPriceSamplerNormal
 from portfolio.rl_base.basis_func import ComposeFunction, PriceNormalizeConst, MeanCostPriceNormalizeConst, State2Feature
 
 jst = timezone("Asia/Tokyo")
-start_datetime = jst.localize(datetime.datetime(2020,11,10,0,0,0))
-end_datetime = jst.localize(datetime.datetime(2020,11,20,0,0,0))
-ticker_number = 19
-window = np.arange(0,50)
-episode_length = 300
 freq_str = "5T"
 
-db_path = Path("db/sub_stock_db/nikkei_255_stock_v2.db")
-
-ticker_codes_df = pd.read_csv(Path("portfolio/rl_base/nikkei225_modified.csv"), header=0)  # 自分で作成
-ticker_codes = ticker_codes_df["code"].values.astype(str).tolist()
-
-def make_env():
+def make_env(db_path,
+             csv_path,
+             is_ticker_sample=True,
+             start_datetime=jst.localize(datetime.datetime(2020,11,10,0,0,0)),
+             end_datetime=jst.localize(datetime.datetime(2020,11,20,0,0,0)),
+             episode_length=300,
+             window=np.arange(0,50),
+             ticker_number=19,
+             fee_const=0.0025,
+             ):
+    ticker_codes_df = pd.read_csv(csv_path, header=0)  # 自分で作成
+    ticker_codes = ticker_codes_df["code"].values.astype(str).tolist()
     # stock_db
     stock_db = StockDatabase(db_path)
 
     # sampler
-    #ticker_names_sampler = TickerSampler(all_ticker_names=ticker_codes,
-    #                                     sampling_ticker_number=ticker_number)
-
-
-    ticker_names_sampler = ConstSamper(TickerSampler(ticker_codes, ticker_number).sample())  # 固定する
+    if is_ticker_sample:
+        ticker_names_sampler = TickerSampler(all_ticker_names=ticker_codes,
+                                            sampling_ticker_number=ticker_number)
+    else:
+        ticker_names_sampler = ConstSamper(TickerSampler(ticker_codes, ticker_number).sample())  # 固定する
 
 
 
@@ -45,10 +46,13 @@ def make_env():
 
     portfolio_sampler = PortfolioVectorSampler(ticker_number+1)
 
+    mean_cost_price_sampler = MeanCostPriceSamplerNormal(mean=None, var=None)  # 意味なし
+
 
     sampler_manager = SamplerManager(ticker_names_sampler=ticker_names_sampler,
                                     datetime_sampler=start_datetime_sampler,
                                     portfolio_vector_sampler=portfolio_sampler,
+                                    mean_cost_price_array_sampler=mean_cost_price_sampler
                                     )
 
 
@@ -72,7 +76,7 @@ def make_env():
     trade_env = TradeEnv(portfolio_transformer,
                         sampler_manager,
                         window=window,
-                        fee_const=0.0025
+                        fee_const=fee_const
                         )
 
     return trade_env

@@ -139,7 +139,7 @@ class PortfolioVectorSampler:
         return portfolio_vector
 
 
-class MeanCostPriceSampler:
+class MeanCostPriceSamplerNormal:
     """
     平均取得価格をサンプリングするためのクラス
     """
@@ -158,8 +158,11 @@ class MeanCostPriceSampler:
         seed: int
             ランダムシード
         """
-        mean_cost_price = self.mean_array + self.var_array * RandomState(seed).randn(self.vector_length)
-        return mean_cost_price
+        if self.mean_array is None or self.var_array is None:
+            return None
+        else:
+            mean_cost_price = self.mean_array + self.var_array * RandomState(seed).randn(self.vector_length)
+            return mean_cost_price
 
 
 class SamplerManager:
@@ -170,7 +173,7 @@ class SamplerManager:
                  ticker_names_sampler,
                  datetime_sampler,
                  portfolio_vector_sampler=ConstSamper(None),
-                 mean_cost_price_array_sampler=ConstSamper(None)
+                 mean_cost_price_array_sampler=MeanCostPriceSamplerNormal(mean=None, var=None)
                 ):
         """
         ticker_names_sampler:
